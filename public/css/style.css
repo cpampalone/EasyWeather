@@ -1,0 +1,6 @@
+.navbar-nav>li {          /* <- this affects just my footer navbar */
+    display: inline-block;
+}
+#pac-input {
+  width: 400px;
+}
