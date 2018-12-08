@@ -1,6 +1,13 @@
-.navbar-nav>li {          /* <- this affects just my footer navbar */
-    display: inline-block;
+.navbar
+.navbar-collapse.collapse{
+  display: block !important;
 }
-#pac-input {
-  width: 400px;
+.navbar-nav>li, .navbar-nav, .navbar-header{
+  float: left !important;
+}
+.navbar-nav.navbar-right:last-child{
+  margin-right: -15px !important;
+}
+.navbar-right{
+  float: right !important;
 }

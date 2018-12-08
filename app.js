@@ -11,10 +11,6 @@ app.use(favicon(path.join(__dirname, 'public/', 'resources/', 'favicon.ico')));
 app.get('/', function (req, res) {
     res.render('pages/index');
 });
-/*
-app.get('/dashbord', function(req, res) {
-  res.render('pages/dashbord');
-});*/
 
 app.listen(80, function () {
   console.log('Running');
