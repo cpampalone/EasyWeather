@@ -14,6 +14,7 @@ var dressRecs = {
   'Below Freezing' : "Winter coat, layered sweater or sweatshirt, gloves, hat,"+
                      " scarf, thermal under-layer"
 }
+var flaggedConditions = ['Chance Light Snow', 'Rain'];
 
 main();
 
@@ -44,10 +45,11 @@ function getLocation() {
 function showPosition(position) {
   $('#pCoords').html('Getting Weather Data...');
   getWeatherPoint(position.coords.latitude, position.coords.longitude);
+  getCityName(position.coords.latitude, position.coords.longitude);
 }
 function getWeatherPoint(lat, long) {
   let apiPointsAddress = 'https://api.weather.gov/points/' + lat + ',' + long
-  //console.log(apiPointsAddress);
+  console.log(apiPointsAddress);
   let request = new XMLHttpRequest();
   console.log('getweatherpoints working');
   request.open('GET', apiPointsAddress, true);
@@ -56,7 +58,7 @@ function getWeatherPoint(lat, long) {
     let pointData = JSON.parse(this.response);
     if (request.status >= 200 && request.status < 400) {
       //console.log(pointData.properties.forecast);
-      setCookie('location', pointData.properties.forecast, 1);
+      //setCookie('location', pointData.properties.forecast, 1);
       $('#pCoords').html('Geting Forecast...');
       getForcast(pointData.properties.forecast);
     } else {
@@ -74,14 +76,36 @@ function getForcast(apiForecastAddress) {
   request.onload = function () {
     let forecastData = JSON.parse(this.response);
     if (request.status >= 200 && request.status < 400) {
-      console.log(forecastData.properties.periods);
-      //setCookie('forecast', JSON.stringify(forecastData.properties.periods), 0.125);
-      //global variable forecast
+      //console.log(forecastData.properties.periods);
       forecast = forecastData.properties.periods;
       panelSetup();
     } else {
     const errorMessage = document.createElement('marquee');
     errorMessage.textContent = `Unable to reach ` + apiForecastAddress;
+    app.appendChild(errorMessage);
+    }
+  }
+  request.send();
+}
+function getCityName(lat, long) {
+  let apiCityAddress = 'https://geo.fcc.gov/api/census/area?lat=' + lat +
+                       '&lon=' + long + '&format=json';
+  console.log(apiCityAddress);
+  let request = new XMLHttpRequest();
+  console.log('getcityname working');
+  request.open('GET', apiCityAddress, true);
+  request.onload = function () {
+    console.log('request working');
+    let cityData = JSON.parse(this.response);
+    if (request.status >= 200 && request.status < 400) {
+      $('#cityName').html('Geting City Name...');
+      //console.log(cityData);
+      let cityName = cityData.results[0].county_name;
+      let stateName = cityData.results[0].state_code;
+      fillCityName(cityName, stateName);
+    } else {
+    const errorMessage = document.createElement('marquee');
+    errorMessage.textContent = `Unable to reach ` + apiCityAddress;
     app.appendChild(errorMessage);
     }
   }
@@ -115,11 +139,11 @@ function checkCookie(cname) {
     var  name = getCookie(cname);
     if (name != "") {
         return true;
-        console.log('true');
+        //console.log('true');
     } else {
         // Cookie ddoes not exist
         return false;
-        console.log('false');
+        //console.log('false');
     }
 }
 //
@@ -127,7 +151,7 @@ function checkCookie(cname) {
 //
 function panelSetup() {
   let forecastData = forecast;
-  let fLen = 48; //number of hours into the forecast we get
+  let fLen = 99; //number of hours into the forecast we get
   let lastTimeQual = "";
   let forecastList =[]
   let tempList = []
@@ -196,9 +220,12 @@ function fillPanel(tempList, forecastList) {
   }
   avgTemp = Math.round(total/tempList.length);
   $('#dashboard .panel-text').last().html(
-    `The temperature will be ` + avgTemp + `<br>` +
+    `The temperature will be ` + avgTemp + `F`+ `<br>` +
     `The forecast contains ` + JSON.stringify(forecastList) + `<br>`
   );
+}
+function fillCityName(cityName, stateName) {
+  $('#cityName').html(cityName + ', ' + stateName);
 }
 //
 // Formatting Functions
@@ -218,7 +245,7 @@ function timeQualifier(hour24) {
   } else {
      qualifier = "Invalid time";
   }
-  console.log(qualifier);
+  //console.log(qualifier);
   return(qualifier);
 }
 function tempQualifier(tempF) {
@@ -243,7 +270,7 @@ function tempQualifier(tempF) {
   } else {
      qualifier = "Invalid temp";
   }
-  console.log(qualifier);
+  //console.log(qualifier);
   return(qualifier);
 }
 function dayQualifier(dateI) {
