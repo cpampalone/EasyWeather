@@ -12,5 +12,8 @@ EasyWeather only uses open, free APIs for weather, location, and other data prov
 * Forecast based graphics
 * Feedback
 
-### Known Bugs
-None yet
+### Known Issues
+* Geolocation services may not work on some browsers without a secure connection. Use Chrome to avoid this issue in development.
+
+### Running EasyWeather
+EasyWeather is built on node.js with Express and EJS. It also uses serve-favicon to display a favicon. To run, navigate to the installation folder and run `node app`

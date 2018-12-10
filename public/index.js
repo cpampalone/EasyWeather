@@ -22,27 +22,22 @@ function main() {
   $('#btnCoords').click(function() {
     $(this).button('loading');
     getLocation()});
-    // Create the search box and link it to the UI element.
-    //var input = document.getElementById('pac-input');
-    //var searchBox = new google.maps.places.SearchBox(input);
-    //var autocomplete = new google.maps.places.Autocomplete(input);
-    //map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
 }
 
 //
 // API Request Functions
 //
 function getLocation() {
-  /*if (checkCookie('location')) {
-    getForcast(getCookie('location'));
-  } */
   if (navigator.geolocation) {
     $('#pCoords').html('Geting Position...');
     $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting position');
-    navigator.geolocation.getCurrentPosition(showPosition);
+    navigator.geolocation.getCurrentPosition(showPosition, geolocationError);
   } else {
-    x.innerHTML = "Geolocation is not supported by this browser.";
+    $('#loadBtnGroup').html("Geolocation is not supported by this browser.");
   }
+}
+function geolocationError(error) {
+  $('#loadBtnGroup').html( 'Something went wrong while finding your location:<br>'+ 'ERROR(' + error.code + '): ' + error.message);
 }
 function showPosition(position) {
   $('#pCoords').html('Getting Weather Data...');
@@ -61,7 +56,6 @@ function getWeatherPoint(lat, long) {
     let pointData = JSON.parse(this.response);
     if (request.status >= 200 && request.status < 400) {
       //console.log(pointData.properties.forecast);
-      //setCookie('location', pointData.properties.forecast, 1);
       $('#pCoords').html('Geting Forecast...');
       $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Geting forecast');
       getForcast(pointData.properties.forecast);
