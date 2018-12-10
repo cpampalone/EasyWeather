@@ -4,22 +4,23 @@ var x = document.getElementById('pCoords');
 var dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
                   'Friday', 'Saturday'];
 var dressRecs = {
-  'Hot' : "Loose clothes, light weight fabrics, light colors",
-  'Warm' : "Shorts, short sleeve shirts, light material",
-  'Mild' : "Pants, long sleeves",
-  'Cool' : "Light Sweater, sweat shirt, or light jacket",
-  'Cold' : "Heavy sweater, jacket, (maybe hat)",
-  'Very Cold' : "Winter coat, warm hat, gloves, scarf",
-  'Freezing' : "Winter coat, layered sweater or sweatshirt, gloves, hat, scarf",
-  'Below Freezing' : "Winter coat, layered sweater or sweatshirt, gloves, hat,"+
+  'Hot' : "loose clothes, light weight fabrics, light colors",
+  'Warm' : "shorts, short sleeve shirts, light material",
+  'Mild' : "pants, long sleeves",
+  'Cool' : "a light sweater, sweat shirt, or light jacket",
+  'Cold' : "a heavy sweater, jacket, (maybe hat)",
+  'Very Cold' : "a winter coat, warm hat, gloves, scarf",
+  'Freezing' : "a winter coat, layered sweater or sweatshirt, gloves, hat, scarf",
+  'Below Freezing' : "a winter coat, layered sweater or sweatshirt, gloves, hat,"+
                      " scarf, thermal under-layer"
 }
-var flaggedConditions = ['Chance Light Snow', 'Rain'];
+var flaggedConditions = ['Snow', 'Rain', 'Hail'];
 
 main();
 
 function main() {
   $('#btnCoords').click(function() {
+    $(this).button('loading');
     getLocation()});
     // Create the search box and link it to the UI element.
     //var input = document.getElementById('pac-input');
@@ -37,6 +38,7 @@ function getLocation() {
   } */
   if (navigator.geolocation) {
     $('#pCoords').html('Geting Position...');
+    $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting position');
     navigator.geolocation.getCurrentPosition(showPosition);
   } else {
     x.innerHTML = "Geolocation is not supported by this browser.";
@@ -44,6 +46,7 @@ function getLocation() {
 }
 function showPosition(position) {
   $('#pCoords').html('Getting Weather Data...');
+  $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting weather data');
   getWeatherPoint(position.coords.latitude, position.coords.longitude);
   getCityName(position.coords.latitude, position.coords.longitude);
 }
@@ -60,6 +63,7 @@ function getWeatherPoint(lat, long) {
       //console.log(pointData.properties.forecast);
       //setCookie('location', pointData.properties.forecast, 1);
       $('#pCoords').html('Geting Forecast...');
+      $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Geting forecast');
       getForcast(pointData.properties.forecast);
     } else {
     const errorMessage = document.createElement('marquee');
@@ -124,7 +128,7 @@ function getCookie(cname) {
     var name = cname + "=";
     var decodedCookie = decodeURIComponent(document.cookie);
     var ca = decodedCookie.split(';');
-    for(var i = 0; i <ca.length; i++) {
+    for(var i = 0; i < ca.length; i++) {
         var c = ca[i];
         while (c.charAt(0) == ' ') {
             c = c.substring(1);
@@ -151,7 +155,7 @@ function checkCookie(cname) {
 //
 function panelSetup() {
   let forecastData = forecast;
-  let fLen = 99; //number of hours into the forecast we get
+  let fLen = 48; //number of hours into the forecast we get
   let lastTimeQual = "";
   let forecastList =[]
   let tempList = []
@@ -167,7 +171,7 @@ function panelSetup() {
     let lastTimeQual = timeQual;
     createPanel(day, lastTimeQual);
     // Iterate through hours to add info to panels
-    for (i = 0; i < fLen; i++) {
+    for (var i = 0; i < fLen; i++) {
       day = dayQualifier(new Date(forecastData[i].startTime));
       timeQual = timeQualifier(
         (new Date(forecastData[i].startTime)).getHours());
@@ -183,17 +187,6 @@ function panelSetup() {
       forecastList.push(forecastData[i].shortForecast);
       tempList.push(forecastData[i].temperature);
       lastTimeQual = timeQual;
-      //let startTime = hourFormat(new Date(forecastData[i].startTime));
-      //console.log((new Date(forecastData[i].startTime)).getDay());
-      //let endTime = hourFormat(new Date(forecastData[i].endTime));
-
-      // append info to box
-      /*
-      + forecastData[i].shortForecast + `, with a temperature of `
-      + forecastData[i].temperature + forecastData[i].temperatureUnit
-      + ` (` + tempQualifier(forecastData[i].temperature) + `, `
-      + `you should wear ` + dressRecs[tempQualifier(forecastData[i].temperature)]
-      + `)` + */
     }
     fillPanel(tempList, forecastList);
     $('#dashboard').fadeIn(console.log('Fading in...'));
@@ -213,15 +206,20 @@ function createPanel(day, timeQual) {
   `);
 }
 function fillPanel(tempList, forecastList) {
+  console.log("Filling panel")
   let avgTemp = 0;
   let total = 0;
   for (var i = 0; i < tempList.length; i++) {
     total += tempList[i];
   }
   avgTemp = Math.round(total/tempList.length);
+  let conditionFill = flaggedConditionsFill(forecastList);
+  let forecastMode = listMode(forecastList)['value'];
   $('#dashboard .panel-text').last().html(
     `The temperature will be ` + avgTemp + `F`+ `<br>` +
-    `The forecast contains ` + JSON.stringify(forecastList) + `<br>`
+    `The forecast is ` + forecastMode.toLowerCase() + `<br>` +
+    conditionFill + `<br>` +
+    `You should wear ` + dressRecs[tempQualifier(avgTemp)]
   );
 }
 function fillCityName(cityName, stateName) {
@@ -273,12 +271,27 @@ function tempQualifier(tempF) {
   //console.log(qualifier);
   return(qualifier);
 }
+function flaggedConditionsFill(forecastList) {
+  //console.log(forecastList.length);
+  //console.log(flaggedConditions.length);
+  let flen = forecastList.length;
+  let clen = flaggedConditions.length;
+  //console.log('Attempting to flag conditions');
+  for (var i=0; i < flen; i++) {
+    for (var j=0; j < clen; j++) {
+      if (forecastList[i].includes(flaggedConditions[j])) {
+        return "There is a chance of " + flaggedConditions[j].toLowerCase() + `<br>`;
+      }
+    }
+  }
+  return "";
+}
 function dayQualifier(dateI) {
   let qualifier = ""
   let day0 = (new Date()).getDay();
   let day1 = dateI.getDay();
   if (day0 == day1) {
-    //Same day0
+    //i.e. today
     return("");
   } else {
     return(dayOfWeek[day1] + " ");
@@ -290,4 +303,27 @@ function hourFormat(isoTime) {
   let hour12 = hour24 % 12;
   hour12 = hour12 ? hour12 : 12;
   return hour12 + ' ' + hourAmPm;
+}
+function listMode(inList) {
+  if (inList.length == 0) {
+    return null;
+  }
+  let modeNum = {};
+  let maxElement = inList[0];
+  let maxCount = 1;
+  let element = inList[i];
+  for (var i=0; i<inList.length; i++) {
+    element = inList[i];
+    if (modeNum[element] == 0) {
+      modeNum[element] = 1;
+    } else {
+      modeNum[element]++;
+    }
+    if (modeNum[element] > maxCount) {
+      maxCount = modeNum[element];
+      maxElement = element;
+    }
+  }
+  return {"value" : maxElement,
+          "count" : maxCount};
 }
