@@ -3,6 +3,13 @@
 var x = document.getElementById('pCoords');
 var dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
                   'Friday', 'Saturday'];
+var timeQualDict = {
+  'Night' : '10pm - 6am',
+  'Morning' : '6am - 10am',
+  'Day' : '10am - 4pm',
+  'Afternoon' : '4pm - 6pm',
+  'Evening' : '6pm - 10pm'
+}
 var dressRecs = {
   'Hot' : "loose clothes, light weight fabrics, light colors",
   'Warm' : "shorts, short sleeve shirts, light material",
@@ -189,9 +196,11 @@ function panelSetup() {
 function createPanel(day, timeQual) {
   $('#dashboard').append(`
     <div class="panel panel-default ` + day + `">
-      <div class="panel-heading">`
-      + day + ` ` + timeQual +
-      `</div>
+      <div class="panel-heading"><span>`
+      + day + ` ` + timeQual
+      + `<em class='pull-right text-muted' id='pnlHeadTime'>`
+      + timeQualDict[timeQual] + `</em>` +
+      `</span></div>
       <div class="panel-body">
         <p class="panel-text">
         </p>
@@ -231,7 +240,7 @@ function timeQualifier(hour24) {
   } else if (hour24 >= 10 && hour24 < 16) {
      qualifier = "Day";
   } else if (hour24 >= 16 && hour24 < 18) {
-     qualifier = "Evening";
+     qualifier = "Afternoon";
   } else if (hour24 >= 18 && hour24 < 22) {
      qualifier = "Evening";
   } else {
