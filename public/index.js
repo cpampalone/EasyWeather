@@ -4,11 +4,11 @@ var x = document.getElementById('pCoords');
 var dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
                   'Friday', 'Saturday'];
 var timeQualDict = {
-  'Night' : '10pm - 6am',
-  'Morning' : '6am - 10am',
-  'Day' : '10am - 4pm',
-  'Afternoon' : '4pm - 6pm',
-  'Evening' : '6pm - 10pm'
+  'Night' : {'range' : '10pm - 6am', 'color' : '#F2EFF6'},
+  'Morning' : {'range' : '6am - 10am', 'color' : '#FFF9E9'},
+  'Day' : {'range' : '10am - 4pm', 'color' : '#E9F6FF'},
+  'Afternoon' : {'range' : '4pm - 6pm', 'color' : '#FFF5E9'},
+  'Evening' : {'range' : '6pm - 10pm', 'color' : '#F6E9FF'}
 }
 var dressRecs = {
   'Hot' : "loose clothes, light weight fabrics, light colors",
@@ -21,6 +21,81 @@ var dressRecs = {
   'Below Freezing' : "a winter coat, layered sweater or sweatshirt, gloves, hat,"+
                      " scarf, thermal under-layer"
 }
+var forecastImageAPI = {
+  'skc' : 'Clear',
+  'few' : 'Few Clouds',
+  'sct' : 'Skattered Clouds',
+  'bkn' : 'Mostly Cloudy',
+  'ovc' : 'Overcast',
+  'snow' : 'Snow',
+  'rain_snow' : 'Rain Snow',
+  //'raip' : 'Rain Ice Pellets',
+  'fzra' : 'Freezing Rain',
+  'rain_fzra' : 'Rain Freezing Rain',
+  //'fzra_sn' : 'Freezing Rain Snow',
+  //'ip' : 'Ice Pellets',
+  //'snip' : 'Snow Ice Pellets',
+  //'minus_ra' : 'Light Rain',
+  'rain' : 'Rain',
+  'rain_showers' : 'Rain Showers',
+  //'hi_shwrs' : 'Showers in Vicinity',
+  'tsra' : 'Thunderstorm',
+  //'scttsra' : 'Scattered Thunderstorms',
+  //'hi_tsra' : 'Thunderstorm in Vicinity',
+  //'fc' : 'Funnel Clouds',
+  'tornado' : 'Tornado',
+  //'hur_warn' : 'Hurricane Warning',
+  //'hur_watch' : 'Hurricane Watch',
+  'tropical_storm' : 'Tropical Sorm',
+  //'ts_warn' : 'Tropical Storm Warning',
+  //'ts_watch' : 'Tropical Storm Watch',
+  //'ts_nowarn' : 'Tropical Storm Conditions presently exist w/Hurricane Warning in effect',
+  'wind_skc' : 'Windy',
+  'wind_few' : 'Few Clouds and Windy',
+  'wind_sct' : 'Partly Cloudy and Windy',
+  'wind_bkn' : 'Mostly Cloudy and Windy',
+  'wind_ovc' : 'Overcast and Windy',
+  'dust' : 'Dust',
+  'smoke' : 'Smoke',
+  'haze' : 'Haze',
+  'hot' : 'Hot',
+  'cold' : 'Cold',
+  'blizzard' : 'Blizzard',
+  'fog' : 'Fog'
+};
+var forecastImages = {
+  'day' : {
+    'clear' : 'clear_day.svg',
+    'cloudy' : 'cloudy.svg',
+    'hail' : 'hail.svg',
+    'heavy rain' : 'heavy_rain.svg',
+    'overcast' : 'overcast.svg',
+    'partly cloudy' : 'partly_cloudy_day.svg',
+    'rain' : 'rain.svg',
+    'scattered showers' : 'scattered_showers_day.svg',
+    'snow' : 'snow.svg',
+    'thunderstorms' : 'thunderstorms.svg',
+    'tornado' : 'tornado.svg',
+    'hurricane' : 'hurricane.svg',
+    'tropical storm' : 'tropical_storm.svg',
+    'windy' : 'windy.svg'
+  },
+  'night' : {
+    'clear' : 'clear_night.svg',
+    'cloudy' : 'cloudy.svg',
+    'hail' : 'hail.svg',
+    'heavy rain' : 'heavy_rain.svg',
+    'overcast' : 'overcast.svg',
+    'partly cloudy' : 'partly_cloudy_night.svg',
+    'rain' : 'rain.svg',
+    'scattered showers' : 'scattered_showers_night.svg',
+    'snow' : 'snow.svg',
+    'thunderstorms' : 'thunderstorms.svg',
+    'tornado' : 'tornado.svg',
+    'hurricane' : 'hurricane.svg',
+    'tropical storm' : 'tropical_storm.svg',
+  }
+};
 var flaggedConditions = ['Snow', 'Rain', 'Hail'];
 
 main();
@@ -194,19 +269,35 @@ function panelSetup() {
   });
 }
 function createPanel(day, timeQual) {
+  let imgTime = '';
+  if ((timeQual == 'Night') || (timeQual == 'Evening')) {
+    imgTime = 'night';
+  } else {
+    imgTime = 'day';
+  };
   $('#dashboard').append(`
     <div class="panel panel-default ` + day + `">
-      <div class="panel-heading"><span>`
-      + day + ` ` + timeQual
-      + `<em class='pull-right text-muted' id='pnlHeadTime'>`
-      + timeQualDict[timeQual] + `</em>` +
-      `</span></div>
+      <div class="panel-heading" style="background-color:` + timeQualDict[timeQual]['color'] + `;">
+        <span>`
+          + day + ` ` + timeQual
+          + `<em class='pull-right text-muted' id='pnlHeadTime'>`
+          + timeQualDict[timeQual]['range'] + `</em>` +
+        `</span>
+      </div>
       <div class="panel-body">
         <p class="panel-text">
+          <div style="padding-left: 20px;" class="row">
+            <div class="span4">`
+              + `<img style="float:left; padding-right: 15px; margin-top: -15px;" src="resources/icons/` + forecastImages[imgTime]['clear'] + `" width="100" height="100" class="pnlImg">` +
+              `<div class="pnlBodyTxt"></div>
+            </div>
+          </div>
+          <div style="padding-left: 20px;" class="row pnlRec"></div>
         </p>
       </div>
     </div>
   `);
+
 }
 function fillPanel(tempList, forecastList) {
   console.log("Filling panel")
@@ -218,12 +309,13 @@ function fillPanel(tempList, forecastList) {
   avgTemp = Math.round(total/tempList.length);
   let conditionFill = flaggedConditionsFill(forecastList);
   let forecastMode = listMode(forecastList)['value'];
-  $('#dashboard .panel-text').last().html(
-    `The temperature will be ` + avgTemp + `F`+ `<br>` +
-    `The forecast is ` + forecastMode.toLowerCase() + `<br>` +
-    conditionFill + `<br>` +
-    `You should wear ` + dressRecs[tempQualifier(avgTemp)]
-  );
+  $('#dashboard .pnlBodyTxt').last().html(
+    `Temperature: ` + avgTemp + `F`+ `<br>` +
+    `Forecast: ` + forecastMode + `<br>` +
+    conditionFill + `<br>`);
+  $('#dashboard .pnlRec').last().append(
+    `<br><em>Recommendation: ` + dressRecs[tempQualifier(avgTemp)] + `</em>`);
+  //$('#dashboard .pnlImg').last().atrr('src', 'resources/icons/' )
 }
 function fillCityName(cityName, stateName) {
   $('#cityName').html(cityName + ', ' + stateName);
