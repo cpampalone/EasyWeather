@@ -66,11 +66,11 @@ var forecastImageAPI = {
 var forecastImages = {
   'day' : {
     'clear' : 'clear_day.svg',
-    'cloudy' : 'cloudy.svg',
+    //'cloudy' : 'cloudy.svg',
     'hail' : 'hail.svg',
     'heavy rain' : 'heavy_rain.svg',
-    'overcast' : 'overcast.svg',
-    'partly cloudy' : 'partly_cloudy_day.svg',
+    'mostly cloudy' : 'overcast.svg',
+    'cloudy' : 'partly_cloudy_day.svg',
     'rain' : 'rain.svg',
     'scattered showers' : 'scattered_showers_day.svg',
     'snow' : 'snow.svg',
@@ -82,11 +82,11 @@ var forecastImages = {
   },
   'night' : {
     'clear' : 'clear_night.svg',
-    'cloudy' : 'cloudy.svg',
+    //'cloudy' : 'cloudy.svg',
     'hail' : 'hail.svg',
     'heavy rain' : 'heavy_rain.svg',
-    'overcast' : 'overcast.svg',
-    'partly cloudy' : 'partly_cloudy_night.svg',
+    'mostly cloudy' : 'overcast.svg',
+    ' cloudy' : 'partly_cloudy_night.svg',
     'rain' : 'rain.svg',
     'scattered showers' : 'scattered_showers_night.svg',
     'snow' : 'snow.svg',
@@ -110,6 +110,7 @@ function main() {
 // API Request Functions
 //
 function getLocation() {
+  // Get location using HTML5 geolocation API
   if (navigator.geolocation) {
     $('#pCoords').html('Geting Position...');
     $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting position');
@@ -119,15 +120,20 @@ function getLocation() {
   }
 }
 function geolocationError(error) {
+  // Output a readable error in the HTML if one occures when using geoloaction
   $('#loadBtnGroup').html( 'Something went wrong while finding your location:<br>'+ 'ERROR(' + error.code + '): ' + error.message);
 }
 function showPosition(position) {
+  // Pass position data from geolocation API to get forecast from point and
+  // city, state info
   $('#pCoords').html('Getting Weather Data...');
   $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting weather data');
   getWeatherPoint(position.coords.latitude, position.coords.longitude);
   getCityName(position.coords.latitude, position.coords.longitude);
 }
 function getWeatherPoint(lat, long) {
+  // Use lat and long coords from geolocation to find the station and relative
+  // position from NOAA API. Initiate request to get forecast from NOAA API
   let apiPointsAddress = 'https://api.weather.gov/points/' + lat + ',' + long
   console.log(apiPointsAddress);
   let request = new XMLHttpRequest();
@@ -150,6 +156,8 @@ function getWeatherPoint(lat, long) {
   request.send();
 }
 function getForcast(apiForecastAddress) {
+  // Using the station and relative position from NOAA API, query the API for
+  // the hourly forecast
   let request = new XMLHttpRequest();
   request.open('GET', apiForecastAddress + '/hourly', true);
   console.log(apiForecastAddress + '/hourly')
@@ -157,8 +165,8 @@ function getForcast(apiForecastAddress) {
     let forecastData = JSON.parse(this.response);
     if (request.status >= 200 && request.status < 400) {
       //console.log(forecastData.properties.periods);
-      forecast = forecastData.properties.periods;
-      panelSetup();
+      let forecast = forecastData.properties.periods;
+      panelSetup(forecast);
     } else {
     const errorMessage = document.createElement('marquee');
     errorMessage.textContent = `Unable to reach ` + apiForecastAddress;
@@ -168,6 +176,8 @@ function getForcast(apiForecastAddress) {
   request.send();
 }
 function getCityName(lat, long) {
+  // Use lat long coords to get city, state info from FCC API and display it in
+  // the navbar
   let apiCityAddress = 'https://geo.fcc.gov/api/census/area?lat=' + lat +
                        '&lon=' + long + '&format=json';
   console.log(apiCityAddress);
@@ -229,51 +239,80 @@ function checkCookie(cname) {
 //
 // Page Functions
 //
-function panelSetup() {
+function panelSetup(forecast) {
+  // Fades out the marque, creates HTML for the panels with hourly forecast
+  // info, and fades in the HTML
   let forecastData = forecast;
   let fLen = 48; //number of hours into the forecast we get
-  let lastTimeQual = "";
-  let forecastList =[]
-  let tempList = []
+  let forecastList =[];
+  let tempList = [];
+  let timeList = [];
   //console.log(forecastData);
+  // Get rid of the marque and bing in the forecat panels
   $('#locationPanel').fadeOut('slow', function(){
     $('#locationPanel').remove();
     $('#main').html(`<div class="panel-group" style="display: none;"
       id="dashboard"></div>`);
-    // Create first empty panel
-    let day = dayQualifier(new Date(forecastData[0].startTime));
+    // Set up time variables for panels
     let timeQual = timeQualifier(
         (new Date(forecastData[0].startTime)).getHours());
     let lastTimeQual = timeQual;
-    createPanel(day, lastTimeQual);
-    // Iterate through hours to add info to panels
+    // Iterate through hourly forecasts to add info to panels
     for (var i = 0; i < fLen; i++) {
-      day = dayQualifier(new Date(forecastData[i].startTime));
-      timeQual = timeQualifier(
-        (new Date(forecastData[i].startTime)).getHours());
+      let time = (new Date(forecastData[i].startTime)).getHours();
+      timeQual = timeQualifier(time);
       if (timeQual != lastTimeQual) {
-        // Publish info to last panel
-        fillPanel(tempList, forecastList);
-        // Create new box to hold info
-        createPanel(day, timeQual);
-        // Clear lists
+        // i.e. if the new hourly forecast belongs to a new panel, create a
+        // panel with the summed up forecast info
+        day = dayQualifier(new Date(forecastData[i-1].startTime));
+        createPanel(day, lastTimeQual, tempList, forecastList, timeList);
+        // Reset the forecast lists
         tempList = [];
         forecastList = [];
-      }
+        timeList = [];
+      };
+      // Add forecast info to their respective lists
       forecastList.push(forecastData[i].shortForecast);
       tempList.push(forecastData[i].temperature);
+      timeList.push(time);
+      // Update the time qual
       lastTimeQual = timeQual;
     }
-    fillPanel(tempList, forecastList);
+    // Once the HTML is created, fade it in
     $('#dashboard').fadeIn(console.log('Fading in...'));
   });
 }
-function createPanel(day, timeQual) {
+function createPanel(day, timeQual, tempList, forecastList, timeList) {
+  // Creates a panel using summed up hourly forecast data
+
+  // For the forecastImages dictionary, determine if we should use a day or
+  // night style image
   let imgTime = '';
   if ((timeQual == 'Night') || (timeQual == 'Evening')) {
     imgTime = 'night';
   } else {
     imgTime = 'day';
+  };
+  // Average out temp data iover the panel/timeQual block
+  let avgTemp = 0;
+  let total = 0;
+  for (var i = 0; i < tempList.length; i++) {
+    total += tempList[i];
+  };
+  avgTemp = Math.round(total/tempList.length);
+  // Flag for conditions in the flaggedConditions list
+  let conditionFill = flaggedConditionsFill(forecastList, timeList);
+  let forecastMode = listMode(forecastList)['value'];
+  let forecastImage = "";
+  let forecastKeys = Object.keys(forecastImages['day']);
+  for (var i = 0; i < forecastKeys.length; i++) {
+    console.log(i);
+    console.log(forecastKeys[i]);
+    console.log(forecastMode.toLowerCase())
+    if (forecastMode.toLowerCase().includes(forecastKeys[i])) {
+      forecastImage = forecastKeys[i];
+      break;
+    };
   };
   $('#dashboard').append(`
     <div class="panel panel-default ` + day + `">
@@ -287,35 +326,24 @@ function createPanel(day, timeQual) {
       <div class="panel-body">
         <p class="panel-text">
           <div style="padding-left: 20px;" class="row">
-            <div class="span4">`
-              + `<img style="float:left; padding-right: 15px; margin-top: -15px;" src="resources/icons/` + forecastImages[imgTime]['clear'] + `" width="100" height="100" class="pnlImg">` +
-              `<div class="pnlBodyTxt"></div>
+            <div class="span4">
+              <img style="float:left; padding-right: 15px; margin-top: -15px;"
+                  src="resources/icons/` + forecastImages[imgTime][forecastImage]
+                  + `" width="100" height="100" class="pnlImg">
+              <div class="pnlBodyTxt">
+                Temperature: ` + avgTemp + `F`+ `<br>
+                Forecast: ` + forecastMode + `<br>` +
+                conditionFill + `<br>
+              </div>
             </div>
           </div>
-          <div style="padding-left: 20px;" class="row pnlRec"></div>
+          <div style="padding-left: 20px;" class="row pnlRec">
+            <br><em>Recommendation: ` + dressRecs[tempQualifier(avgTemp)] + `</em>
+          </div>
         </p>
       </div>
     </div>
   `);
-
-}
-function fillPanel(tempList, forecastList) {
-  console.log("Filling panel")
-  let avgTemp = 0;
-  let total = 0;
-  for (var i = 0; i < tempList.length; i++) {
-    total += tempList[i];
-  }
-  avgTemp = Math.round(total/tempList.length);
-  let conditionFill = flaggedConditionsFill(forecastList);
-  let forecastMode = listMode(forecastList)['value'];
-  $('#dashboard .pnlBodyTxt').last().html(
-    `Temperature: ` + avgTemp + `F`+ `<br>` +
-    `Forecast: ` + forecastMode + `<br>` +
-    conditionFill + `<br>`);
-  $('#dashboard .pnlRec').last().append(
-    `<br><em>Recommendation: ` + dressRecs[tempQualifier(avgTemp)] + `</em>`);
-  //$('#dashboard .pnlImg').last().atrr('src', 'resources/icons/' )
 }
 function fillCityName(cityName, stateName) {
   $('#cityName').html(cityName + ', ' + stateName);
@@ -324,6 +352,7 @@ function fillCityName(cityName, stateName) {
 // Formatting Functions
 //
 function timeQualifier(hour24) {
+  // Determines which block/panel the hourly forecast belongs to
   let qualifier = "";
   if ((hour24 >= 0 && hour24 < 6) || (hour24 >= 22 && hour24 < 24)) {
      qualifier = "Night";
@@ -366,22 +395,26 @@ function tempQualifier(tempF) {
   //console.log(qualifier);
   return(qualifier);
 }
-function flaggedConditionsFill(forecastList) {
+function flaggedConditionsFill(forecastList, timeList) {
+  // Outputs a conditon if its flagged (i.e. adverse condition) and in the
+  // flaggedConditions list
   //console.log(forecastList.length);
   //console.log(flaggedConditions.length);
+  //console.log(timeList);
   let flen = forecastList.length;
   let clen = flaggedConditions.length;
   //console.log('Attempting to flag conditions');
   for (var i=0; i < flen; i++) {
     for (var j=0; j < clen; j++) {
       if (forecastList[i].includes(flaggedConditions[j])) {
-        return "There is a chance of " + flaggedConditions[j].toLowerCase() + `<br>`;
+        return "There is a chance of " + flaggedConditions[j].toLowerCase() + ` at ` + hourFormat(timeList[j]) + `<br>`;
       }
     }
   }
   return "";
 }
 function dayQualifier(dateI) {
+  // Output a readable day of the week string from ISO date
   let qualifier = ""
   let day0 = (new Date()).getDay();
   let day1 = dateI.getDay();
@@ -392,14 +425,15 @@ function dayQualifier(dateI) {
     return(dayOfWeek[day1] + " ");
   }
 }
-function hourFormat(isoTime) {
-  let hour24 = (new Date(isoTime)).getHours();
+function hourFormat(hour24) {
+  // Output a readable string in 12hr time from 24hr time
   let hourAmPm = hour24 >= 12 ? 'PM' : 'AM';
   let hour12 = hour24 % 12;
   hour12 = hour12 ? hour12 : 12;
   return hour12 + ' ' + hourAmPm;
 }
 function listMode(inList) {
+  // Find the most common sting (mode) of a list
   if (inList.length == 0) {
     return null;
   }
