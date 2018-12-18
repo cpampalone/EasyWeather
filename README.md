@@ -27,4 +27,4 @@ There is no need to install these as they are included in the EasyWeather packag
 * jQuery 3.3.1 (from Google)
 * Font Awesome 4.7.0 (from Cloudflare)
 * Bootstrap 3.3.7 JS and CSS (from Bootstrapcdn)
-* Icons are provided by 'icon lauk' under the (Creative Commons Attribution 3.0 Unported)[https://creativecommons.org/licenses/by/3.0/] license. Some icons are edited
+* Icons are provided by 'icon lauk' under the [Creative Commons Attribution 3.0 Unported](https://creativecommons.org/licenses/by/3.0/) license. Some icons are edited
