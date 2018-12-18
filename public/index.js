@@ -1,6 +1,5 @@
-//console.log('It worked');
-
 var x = document.getElementById('pCoords');
+var forecastAddress;
 var dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday',
                   'Friday', 'Saturday'];
 var timeQualDict = {
@@ -21,51 +20,10 @@ var dressRecs = {
   'Below Freezing' : "a winter coat, layered sweater or sweatshirt, gloves, hat,"+
                      " scarf, thermal under-layer"
 }
-var forecastImageAPI = {
-  'skc' : 'Clear',
-  'few' : 'Few Clouds',
-  'sct' : 'Skattered Clouds',
-  'bkn' : 'Mostly Cloudy',
-  'ovc' : 'Overcast',
-  'snow' : 'Snow',
-  'rain_snow' : 'Rain Snow',
-  //'raip' : 'Rain Ice Pellets',
-  'fzra' : 'Freezing Rain',
-  'rain_fzra' : 'Rain Freezing Rain',
-  //'fzra_sn' : 'Freezing Rain Snow',
-  //'ip' : 'Ice Pellets',
-  //'snip' : 'Snow Ice Pellets',
-  //'minus_ra' : 'Light Rain',
-  'rain' : 'Rain',
-  'rain_showers' : 'Rain Showers',
-  //'hi_shwrs' : 'Showers in Vicinity',
-  'tsra' : 'Thunderstorm',
-  //'scttsra' : 'Scattered Thunderstorms',
-  //'hi_tsra' : 'Thunderstorm in Vicinity',
-  //'fc' : 'Funnel Clouds',
-  'tornado' : 'Tornado',
-  //'hur_warn' : 'Hurricane Warning',
-  //'hur_watch' : 'Hurricane Watch',
-  'tropical_storm' : 'Tropical Sorm',
-  //'ts_warn' : 'Tropical Storm Warning',
-  //'ts_watch' : 'Tropical Storm Watch',
-  //'ts_nowarn' : 'Tropical Storm Conditions presently exist w/Hurricane Warning in effect',
-  'wind_skc' : 'Windy',
-  'wind_few' : 'Few Clouds and Windy',
-  'wind_sct' : 'Partly Cloudy and Windy',
-  'wind_bkn' : 'Mostly Cloudy and Windy',
-  'wind_ovc' : 'Overcast and Windy',
-  'dust' : 'Dust',
-  'smoke' : 'Smoke',
-  'haze' : 'Haze',
-  'hot' : 'Hot',
-  'cold' : 'Cold',
-  'blizzard' : 'Blizzard',
-  'fog' : 'Fog'
-};
 var forecastImages = {
   'day' : {
     'clear' : 'clear_day.svg',
+    'sunny' : 'clear_day.svg',
     //'cloudy' : 'cloudy.svg',
     'hail' : 'hail.svg',
     'heavy rain' : 'heavy_rain.svg',
@@ -86,7 +44,7 @@ var forecastImages = {
     'hail' : 'hail.svg',
     'heavy rain' : 'heavy_rain.svg',
     'mostly cloudy' : 'overcast.svg',
-    ' cloudy' : 'partly_cloudy_night.svg',
+    'cloudy' : 'partly_cloudy_night.svg',
     'rain' : 'rain.svg',
     'scattered showers' : 'scattered_showers_night.svg',
     'snow' : 'snow.svg',
@@ -103,21 +61,42 @@ main();
 function main() {
   $('#btnCoords').click(function() {
     $(this).button('loading');
-    getLocation()});
-}
+    getLocation()
+      .then(position => showPosition(position), err => geolocationError(err))
+      .then(function(latLong) {
+        getCityName(latLong['lat'], latLong['long']);
+        return getWeatherPoint(latLong['lat'], latLong['long']);
+      })
+      .then(function(forecastAddress) {
+        forecastAPIAddress = forecastAddress;
+        return getForecast(forecastAddress);
+      })
+      .then(forecastData => forecastDisplay(forecastData))
+    $('#updateForecast').css('display', 'initial');
+    $('#updateForecast').click(function() {
+      getForecast(forecastAPIAddress)
+        .then(function(forecastData) {
+          $('#dashboard').html('');
+          return panelSetup(forecastData)
+        })
+    })
+  });
 
+}
 //
 // API Request Functions
 //
 function getLocation() {
   // Get location using HTML5 geolocation API
-  if (navigator.geolocation) {
-    $('#pCoords').html('Geting Position...');
-    $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting position');
-    navigator.geolocation.getCurrentPosition(showPosition, geolocationError);
-  } else {
-    $('#loadBtnGroup').html("Geolocation is not supported by this browser.");
-  }
+  return new Promise((resolve, reject) => {
+    if (navigator.geolocation) {
+      $('#pCoords').html('Geting Position...');
+      $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting position');
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    } else {
+      $('#loadBtnGroup').html("Geolocation is not supported by this browser.");
+    }
+  })
 }
 function geolocationError(error) {
   // Output a readable error in the HTML if one occures when using geoloaction
@@ -128,52 +107,58 @@ function showPosition(position) {
   // city, state info
   $('#pCoords').html('Getting Weather Data...');
   $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Getting weather data');
-  getWeatherPoint(position.coords.latitude, position.coords.longitude);
-  getCityName(position.coords.latitude, position.coords.longitude);
+  return {'lat': position.coords.latitude, 'long': position.coords.longitude};
 }
 function getWeatherPoint(lat, long) {
   // Use lat and long coords from geolocation to find the station and relative
   // position from NOAA API. Initiate request to get forecast from NOAA API
-  let apiPointsAddress = 'https://api.weather.gov/points/' + lat + ',' + long
-  console.log(apiPointsAddress);
-  let request = new XMLHttpRequest();
-  console.log('getweatherpoints working');
-  request.open('GET', apiPointsAddress, true);
-  request.onload = function () {
-    console.log('request working');
-    let pointData = JSON.parse(this.response);
-    if (request.status >= 200 && request.status < 400) {
-      //console.log(pointData.properties.forecast);
-      $('#pCoords').html('Geting Forecast...');
-      $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Geting forecast');
-      getForcast(pointData.properties.forecast);
-    } else {
-    const errorMessage = document.createElement('marquee');
-    errorMessage.textContent = `Unable to reach ` + apiPointsAddress;
-    app.appendChild(errorMessage);
-    }
-  }
-  request.send();
+  return new Promise((resolve, reject) => {
+    let apiPointsAddress = 'https://api.weather.gov/points/' + lat + ',' + long
+    console.log(apiPointsAddress);
+    let request = new XMLHttpRequest();
+    console.log('getweatherpoints working');
+    request.open('GET', apiPointsAddress, true);
+    request.onload = function () {
+      console.log('request working');
+      //let pointData = JSON.parse(this.response);
+      if (request.status >= 200 && request.status < 400) {
+        $('#pCoords').html('Geting Forecast...');
+        $('#btnCoords').attr('data-loading-text', '<i class="fa fa-spinner fa-spin"></i> Geting forecast');
+        resolve(JSON.parse(request.response).properties.forecast);
+      } else {
+        reject(function() {
+          const errorMessage = document.createElement('marquee');
+          errorMessage.textContent = `Unable to reach ` + apiPointsAddress;
+          app.appendChild(errorMessage);
+        })
+      }
+    };
+    request.send();
+  });
 }
-function getForcast(apiForecastAddress) {
+function getForecast(apiForecastAddress) {
   // Using the station and relative position from NOAA API, query the API for
   // the hourly forecast
-  let request = new XMLHttpRequest();
-  request.open('GET', apiForecastAddress + '/hourly', true);
-  console.log(apiForecastAddress + '/hourly')
-  request.onload = function () {
-    let forecastData = JSON.parse(this.response);
-    if (request.status >= 200 && request.status < 400) {
-      //console.log(forecastData.properties.periods);
-      let forecast = forecastData.properties.periods;
-      panelSetup(forecast);
-    } else {
-    const errorMessage = document.createElement('marquee');
-    errorMessage.textContent = `Unable to reach ` + apiForecastAddress;
-    app.appendChild(errorMessage);
+  return new Promise((resolve, reject) => {
+    let request = new XMLHttpRequest();
+    request.open('GET', apiForecastAddress + '/hourly', true);
+    console.log(apiForecastAddress + '/hourly')
+    request.onload = function () {
+      let forecastData = JSON.parse(this.response);
+      if (request.status >= 200 && request.status < 400) {
+        //console.log(forecastData.properties.periods);
+        resolve(JSON.parse(request.response).properties.periods)
+        //forecastDisplay(forecastData.properties.periods);
+      } else {
+        reject(function() {
+          const errorMessage = document.createElement('marquee');
+          errorMessage.textContent = `Unable to reach ` + apiForecastAddress;
+          app.appendChild(errorMessage);
+        })
+      }
     }
-  }
-  request.send();
+    request.send();
+  })
 }
 function getCityName(lat, long) {
   // Use lat long coords to get city, state info from FCC API and display it in
@@ -239,48 +224,52 @@ function checkCookie(cname) {
 //
 // Page Functions
 //
-function panelSetup(forecast) {
+function forecastDisplay(forecast) {
   // Fades out the marque, creates HTML for the panels with hourly forecast
   // info, and fades in the HTML
-  let forecastData = forecast;
-  let fLen = 48; //number of hours into the forecast we get
-  let forecastList =[];
-  let tempList = [];
-  let timeList = [];
-  //console.log(forecastData);
+
   // Get rid of the marque and bing in the forecat panels
   $('#locationPanel').fadeOut('slow', function(){
     $('#locationPanel').remove();
     $('#main').html(`<div class="panel-group" style="display: none;"
       id="dashboard"></div>`);
-    // Set up time variables for panels
-    let timeQual = timeQualifier(
-        (new Date(forecastData[0].startTime)).getHours());
-    let lastTimeQual = timeQual;
-    // Iterate through hourly forecasts to add info to panels
-    for (var i = 0; i < fLen; i++) {
-      let time = (new Date(forecastData[i].startTime)).getHours();
-      timeQual = timeQualifier(time);
-      if (timeQual != lastTimeQual) {
-        // i.e. if the new hourly forecast belongs to a new panel, create a
-        // panel with the summed up forecast info
-        day = dayQualifier(new Date(forecastData[i-1].startTime));
-        createPanel(day, lastTimeQual, tempList, forecastList, timeList);
-        // Reset the forecast lists
-        tempList = [];
-        forecastList = [];
-        timeList = [];
-      };
-      // Add forecast info to their respective lists
-      forecastList.push(forecastData[i].shortForecast);
-      tempList.push(forecastData[i].temperature);
-      timeList.push(time);
-      // Update the time qual
-      lastTimeQual = timeQual;
-    }
-    // Once the HTML is created, fade it in
-    $('#dashboard').fadeIn(console.log('Fading in...'));
+      panelSetup(forecast);
+      // Once the HTML is created, fade it in
+      $('#dashboard').fadeIn(console.log('Fading in...'));
   });
+}
+function panelSetup(forecast) {
+  // Creates all of the panel HTML
+  let forecastData = forecast;
+  let fLen = 48; //number of hours into the forecast we get
+  let forecastList =[];
+  let tempList = [];
+  // Set up time variables for panels
+  let timeList = [];
+  let timeQual = timeQualifier(
+      (new Date(forecastData[0].startTime)).getHours());
+  let lastTimeQual = timeQual;
+  // Iterate through hourly forecasts to add info to panels
+  for (var i = 0; i < fLen; i++) {
+    let time = (new Date(forecastData[i].startTime)).getHours();
+    timeQual = timeQualifier(time);
+    if (timeQual != lastTimeQual) {
+      // i.e. if the new hourly forecast belongs to a new panel, create a
+      // panel with the summed up forecast info
+      day = dayQualifier(new Date(forecastData[i-1].startTime));
+      createPanel(day, lastTimeQual, tempList, forecastList, timeList);
+      // Reset the forecast lists
+      tempList = [];
+      forecastList = [];
+      timeList = [];
+    };
+    // Add forecast info to their respective lists
+    forecastList.push(forecastData[i].shortForecast);
+    tempList.push(forecastData[i].temperature);
+    timeList.push(time);
+    // Update the time qual
+    lastTimeQual = timeQual;
+  };
 }
 function createPanel(day, timeQual, tempList, forecastList, timeList) {
   // Creates a panel using summed up hourly forecast data
@@ -303,12 +292,10 @@ function createPanel(day, timeQual, tempList, forecastList, timeList) {
   // Flag for conditions in the flaggedConditions list
   let conditionFill = flaggedConditionsFill(forecastList, timeList);
   let forecastMode = listMode(forecastList)['value'];
+  // Get the correct image dict key for the given forecast
   let forecastImage = "";
   let forecastKeys = Object.keys(forecastImages['day']);
   for (var i = 0; i < forecastKeys.length; i++) {
-    console.log(i);
-    console.log(forecastKeys[i]);
-    console.log(forecastMode.toLowerCase())
     if (forecastMode.toLowerCase().includes(forecastKeys[i])) {
       forecastImage = forecastKeys[i];
       break;
@@ -347,6 +334,9 @@ function createPanel(day, timeQual, tempList, forecastList, timeList) {
 }
 function fillCityName(cityName, stateName) {
   $('#cityName').html(cityName + ', ' + stateName);
+  $('#cityName').click(function() {
+    // Update location and forecast
+  });
 }
 //
 // Formatting Functions
@@ -398,9 +388,6 @@ function tempQualifier(tempF) {
 function flaggedConditionsFill(forecastList, timeList) {
   // Outputs a conditon if its flagged (i.e. adverse condition) and in the
   // flaggedConditions list
-  //console.log(forecastList.length);
-  //console.log(flaggedConditions.length);
-  //console.log(timeList);
   let flen = forecastList.length;
   let clen = flaggedConditions.length;
   //console.log('Attempting to flag conditions');
