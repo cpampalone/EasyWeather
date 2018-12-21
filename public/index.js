@@ -81,7 +81,6 @@ function main() {
         })
     })
   });
-
 }
 //
 // API Request Functions
@@ -244,6 +243,7 @@ function panelSetup(forecast) {
   let fLen = 48; //number of hours into the forecast we get
   let forecastList =[];
   let tempList = [];
+  let day = "";
   // Set up time variables for panels
   let timeList = [];
   let timeQual = timeQualifier(
@@ -256,12 +256,12 @@ function panelSetup(forecast) {
     if (timeQual != lastTimeQual) {
       // i.e. if the new hourly forecast belongs to a new panel, create a
       // panel with the summed up forecast info
-      day = dayQualifier(new Date(forecastData[i-1].startTime));
       createPanel(day, lastTimeQual, tempList, forecastList, timeList);
       // Reset the forecast lists
       tempList = [];
       forecastList = [];
       timeList = [];
+      day = dayQualifier(new Date(forecastData[i].startTime));
     };
     // Add forecast info to their respective lists
     forecastList.push(forecastData[i].shortForecast);
